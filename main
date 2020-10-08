@@ -1,0 +1,195 @@
+# Add your Twitter credentials. Do NOT share them with anyone
+
+consumer_key =
+consumer_secret =
+access_token = 
+access_token_secret =
+
+# Enter the details of your search
+
+keyword = 'keyword here'  
+
+lang = 'en' 
+
+number_tweets= 4 # current limit 10000
+
+
+
+
+# import libraries
+
+import tweepy
+from tweepy import Stream
+from tweepy import OAuthHandler
+from tweepy.streaming import StreamListener
+import sys
+import datetime
+
+import pandas as pd
+pd.options.display.max_colwidth =1800
+
+# keys
+
+consumer_key = consumer_key
+consumer_secret = consumer_secret 
+access_token = access_token
+access_token_secret = access_token_secret 
+
+auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+auth.set_access_token(access_token, access_token_secret)
+api = tweepy.API(auth) 
+
+
+
+#Switching to application authentication
+
+auth=tweepy.AppAuthHandler(consumer_key, consumer_secret)
+
+
+# TWEEPY
+
+# http://docs.tweepy.org/en/v3.5.0/api.html
+
+
+# Standard queries
+# https://developer.twitter.com/en/docs/tweets/rules-and-filtering/overview/standard-operators
+
+
+
+#Setting up new api wrapper, using authentication only
+
+api = tweepy.API(auth, wait_on_rate_limit=True,wait_on_rate_limit_notify=True) 
+
+if (not api):
+    print('problem with api')
+
+
+
+listOfTweets = []
+
+
+
+def query_twitter(keyword, lang, number_tweets):
+  for tweet in tweepy.Cursor(api.search, q=keyword, tweet_mode='extended', lang=lang).items(number_tweets):
+          # Add tweets in this format
+          dict_ = {'Screen Name': tweet.user.screen_name,
+                  'User Name': tweet.user.name,
+                  'Followers Count': tweet.user.followers_count, 
+                  'Friends Count': tweet.user.friends_count,
+                  'Users Tweets Count': tweet.user.statuses_count,
+                  'User Location': tweet.user.location,
+                  'Coordinates': tweet.coordinates,
+                  'Place': tweet.place, 
+                  'Tweet Created At': tweet.created_at,
+                  'Tweet Text': tweet.full_text,
+                  'Tweet Coordinates': tweet.coordinates,
+                  'Retweet Count': tweet.retweet_count,
+                  'Retweeted': tweet.retweeted,
+                  'Phone Type': tweet.source,
+                  'Favorite Count': tweet.favorite_count,
+                  'Favorited': tweet.favorited,
+                  'Replied': tweet.in_reply_to_status_id_str
+                  }
+          listOfTweets.append(dict_)
+          df_tweets = pd.DataFrame(listOfTweets)
+  return df_tweets
+
+
+# Extraction
+
+
+d = query_twitter (keyword =keyword, lang = lang, number_tweets=number_tweets)
+d = d.drop_duplicates(subset='Tweet Text')
+d.to_csv('dataframe.csv') # the tweets will appear below and will be temporarily saved on your Colab. Make sure you download it if you want to use it after closing Colab
+
+retweet_count10 = d.sort_values(by='Retweet Count').head(10).copy()
+
+retweet_count10.to_csv('retweet_count10.csv')
+
+favorite_count10 = d.sort_values(by='Favorite Count').head(10).copy()
+
+favorite_count10.to_csv('favorite_count.csv10')
+
+d['Retweet by Followers'] = d['Retweet Count'] / d['Followers Count']
+retweet_by_followers10 = d.sort_values(by='Retweet by Followers', ascending=False).head(10).copy()
+
+retweet_by_followers10.to_csv('retweet_by_followers10.csv')
+
+d['Retweet by Friends'] = d['Retweet Count'] / d['Friends Count']
+retweet_by_friends10 = d.sort_values(by='Retweet by Friends', ascending=False).head(10).copy()
+
+retweet_by_friends10.to_csv('retweet_by_friends10.csv')
+
+d['Favorite by Followers'] = d['Favorite Count'] / d['Followers Count']
+favorite_by_followers10  = d.sort_values(by='Favorite by Followers', ascending=False).head(10).copy()
+
+favorite_by_followers10.to_csv('favorite_by_followers10.csv')
+
+d['Favorite by Friends'] = d['Favorite Count'] / d['Friends Count']
+favorite_by_friends10 = d.sort_values(by='Favorite by Friends', ascending=False).head(10).copy()
+
+favorite_by_friends10.to_csv('favorite_by_friends10.csv')
+
+
+d.info()
+
+import pandas as pd
+
+df = pd.read_csv('df_pre_poo.csv')
+df.info()
+
+# most common words 
+
+from nltk.corpus import stopwords
+import string
+import nltk
+nltk.download('stopwords')
+from nltk.tokenize import word_tokenize
+nltk.download('punkt')
+from gensim.summarization import keywords
+
+
+stop = stopwords.words('portuguese') + list(string.punctuation)
+
+
+combined_text = [w for w in df['Tweet Text']]
+
+combined_text = str(combined_text)
+
+tok_text = [w for w in word_tokenize(str(combined_text))]
+
+tok_text = [w.lower() for w in tok_text if w not in stop and len(w) >2]
+
+
+keys = keywords(str(stop_tok), words=24).split('\n')
+
+
+
+df.info()
+
+def location_word(word):
+
+  from collections import Counter
+
+
+  ap = []
+  for i in range(0, len(df)):
+    if word in df.iloc[i, 4]:
+      if str(df.iloc[i, 5]) != 'nan':
+        ap.append(df.iloc[i,5])
+
+  total_freq = Counter(ap)
+
+  return total_freq.most_common()
+
+
+
+
+
+
+
+
+
+
+
+
