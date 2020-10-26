@@ -6,6 +6,7 @@ This application will automatically:
 Collect up to 10,000 tweets from the past 14 days which contain your chosen keyword(s)
 
 Generate tables of the: 
+
 10 most retweeted messages 
 10 most retweeted messages by number of followers 
 10 most retweeted messages by number of friends 
@@ -22,7 +23,7 @@ This is a BETA VERSION, so if you have any issues, please write to j.lobato@coop
 
 TWITTER CREDENTIALS
 
-You need to tell Twiteer you are going to collect their data. This is the only part that requires a bit of your attention. Luckly you only have to do it once.
+You need to tell Twitter you are going to collect their data. This is the only part that requires a bit of your attention. Luckly you only have to do it once.
 
 This is done by acquiring Twitter Credentials (they are free and you need to get them only once).
 
