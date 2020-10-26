@@ -143,16 +143,27 @@ df.info()
 from nltk.corpus import stopwords
 import string
 import nltk
-nltk.download('stopwords')
 from nltk.tokenize import word_tokenize
-nltk.download('punkt')
+from nltk.stem import WordNetLemmatizer
 from gensim.summarization import keywords
+import re
+#from nltk.stem.lancaster import LancasterStemmer
+#from nltk.stem import SnowballStemmer
+
+#nltk.download('stopwords')
+#nltk.download('punkt')
 
 
-stop = stopwords.words('portuguese') + list(string.punctuation)
+stopwords_language = 'english'
+
+stop = stopwords.words(stopwords_language) + list(string.punctuation)
+
+stop = stop + ['http', 'https', 'amp']
+
+lemma = WordNetLemmatizer()
 
 
-combined_text = [w for w in df['Tweet Text']]
+combined_text = [w for w in d['Tweet Text']]
 
 combined_text = str(combined_text)
 
@@ -161,30 +172,77 @@ tok_text = [w for w in word_tokenize(str(combined_text))]
 tok_text = [w.lower() for w in tok_text if w not in stop and len(w) >2]
 
 
-keys = keywords(str(stop_tok), words=24).split('\n')
+tok_text = [lemma.lemmatize(w) for w in tok_text]
 
+keys = keywords(str(tok_text), words=15).split('\n')
 
+key_words = keys.copy()
 
-df.info()
-
-def location_word(word):
-
-  from collections import Counter
-
-
-  ap = []
-  for i in range(0, len(df)):
-    if word in df.iloc[i, 4]:
-      if str(df.iloc[i, 5]) != 'nan':
-        ap.append(df.iloc[i,5])
-
-  total_freq = Counter(ap)
-
-  return total_freq.most_common()
+keys_score =  keywords(str(tok_text), scores = True, words=24)#.split('\n')
 
 
 
 
+#print(keys_score)
+print(keys)
+
+
+## REMOVE ANY IRRELEVANTE KEYWORD 
+
+remove = [] # type here keywords to be removed
+
+if remove is None:
+    clean_keys = keys
+    else:
+    clean_keys = [w for w in keys if w not in remove]
+    clean_keys
+
+# wordcloud 
+
+import re
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud, STOPWORDS
+
+stopwords_cloud = set(STOPWORDS)
+
+word_keys = re.sub("'", " ",str(keys))
+
+wordcloud = WordCloud(max_font_size=50, max_words=20, stopwords = stopwords_cloud, background_color="white").generate(word_keys)
+
+# Display the generated image:
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis("off")
+
+
+
+# keywords by place
+
+from nltk.tokenize import word_tokenize
+
+
+#d['Tweet Text Str'] = d['Tweet Text'].astype('str') 
+
+d['Tweet Text String'] =  d['Tweet Text'].str.lower()
+
+
+list_f = []
+
+list_location = []
+
+for ii in range(len(key_words)): 
+      
+    location = []
+    for i in range(0, len(d)): 
+
+        if clean_keys[ii] in d.iloc[i, -1]:
+            location.append(d.iloc[i, 5])
+    fig_loc = pd.Series(location)
+    fig_loc2 = fig_loc.value_counts()
+    fig_loc2[:10].sort_values().plot(title=clean_keys[ii], kind='barh')
+    fname = '{}.jpg'.format(clean_keys[ii])
+    plt.savefig(fname)
+    
+plt.show()
 
 
 
