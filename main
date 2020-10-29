@@ -123,8 +123,8 @@ from nltk.stem import WordNetLemmatizer
 from gensim.summarization import keywords
 import re
 
-#nltk.download('stopwords')
-#nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('punkt')
 
 
 # Choose a language
