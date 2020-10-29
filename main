@@ -1,0 +1,208 @@
+consumer_key =
+consumer_secret =
+access_token = 
+access_token_secret =
+
+! pip install tweepy
+
+import tweepy
+from tweepy import Stream
+from tweepy import OAuthHandler
+from tweepy.streaming import StreamListener
+import sys
+import datetime
+
+import pandas as pd
+pd.options.display.max_colwidth =1800
+
+# keys
+
+consumer_key = consumer_key
+consumer_secret = consumer_secret 
+access_token = access_token
+access_token_secret = access_token_secret 
+
+auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+auth.set_access_token(access_token, access_token_secret)
+api = tweepy.API(auth) 
+
+
+
+#Switching to application authentication
+
+auth=tweepy.AppAuthHandler(consumer_key, consumer_secret)
+
+
+
+#Setting up new api wrapper, using authentication only
+
+api = tweepy.API(auth, wait_on_rate_limit=True,wait_on_rate_limit_notify=True) 
+
+if (not api):
+    print('problem with api')
+
+
+
+listOfTweets = []
+
+
+
+def query_twitter(keyword, lang, number_tweets):
+    for tweet in tweepy.Cursor(api.search, q=keyword, tweet_mode='extended', lang=lang).items(number_tweets):
+        # Add tweets in this format
+        dict_ = {'Screen Name': tweet.user.screen_name,
+          'User Name': tweet.user.name,
+          'Followers Count': tweet.user.followers_count, 
+          'Friends Count': tweet.user.friends_count,
+          'Users Tweets Count': tweet.user.statuses_count,
+          'User Location': tweet.user.location,
+          'Coordinates': tweet.coordinates,
+          'Place': tweet.place, 
+          'Tweet Created At': tweet.created_at,
+          'Tweet Text': tweet.full_text,
+          'Tweet Coordinates': tweet.coordinates,
+          'Retweet Count': tweet.retweet_count,
+          'Retweeted': tweet.retweeted,
+          'Phone Type': tweet.source,
+          'Favorite Count': tweet.favorite_count,
+          'Favorited': tweet.favorited,
+          'Replied': tweet.in_reply_to_status_id_str
+          }
+        listOfTweets.append(dict_)
+        df_tweets = pd.DataFrame(listOfTweets)
+    return df_tweets
+
+keyword = '' # type in between the '' in red 
+
+lang = 'en' # en for English. 
+
+number_tweets= 60 # type the number of tweets. The current limit is 10000
+
+d = query_twitter (keyword =keyword, lang = lang, number_tweets=number_tweets)
+d = d.drop_duplicates(subset='Tweet Text')
+d.to_csv('dataframe.csv') 
+
+# Delete the # below if you want to save the tables as CSV
+
+retweet_count10 = d.sort_values(by='Retweet Count').head(10).copy()
+
+retweet_count10.to_csv('retweet_count10.csv')
+
+favorite_count10 = d.sort_values(by='Favorite Count').head(10).copy()
+
+favorite_count10.to_csv('favorite_count.csv10')
+
+d['Retweet by Followers'] = d['Retweet Count'] / d['Followers Count']
+retweet_by_followers10 = d.sort_values(by='Retweet by Followers', ascending=False).head(10).copy()
+
+retweet_by_followers10.to_csv('retweet_by_followers10.csv')
+
+d['Retweet by Friends'] = d['Retweet Count'] / d['Friends Count']
+retweet_by_friends10 = d.sort_values(by='Retweet by Friends', ascending=False).head(10).copy()
+
+retweet_by_friends10.to_csv('retweet_by_friends10.csv')
+
+d['Favorite by Followers'] = d['Favorite Count'] / d['Followers Count']
+favorite_by_followers10  = d.sort_values(by='Favorite by Followers', ascending=False).head(10).copy()
+
+favorite_by_followers10.to_csv('favorite_by_followers10.csv')
+
+d['Favorite by Friends'] = d['Favorite Count'] / d['Friends Count']
+favorite_by_friends10 = d.sort_values(by='Favorite by Friends', ascending=False).head(10).copy()
+
+favorite_by_friends10.to_csv('favorite_by_friends10.csv')
+
+
+# Find the most common words 
+
+from nltk.corpus import stopwords
+import string
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+from gensim.summarization import keywords
+import re
+
+#nltk.download('stopwords')
+#nltk.download('punkt')
+
+
+# Choose a language
+
+stopwords_language = 'english' 
+
+
+stop = stopwords.words(stopwords_language) + list(string.punctuation)
+
+stop = stop + ['http', 'https', 'amp'] 
+
+lemma = WordNetLemmatizer()
+
+
+combined_text = [w for w in d['Tweet Text']]
+
+combined_text = str(combined_text)
+
+tok_text = [w for w in word_tokenize(str(combined_text))]
+
+tok_text = [w.lower() for w in tok_text if w not in stop and len(w) >2]
+
+
+tok_text = [lemma.lemmatize(w) for w in tok_text]
+
+keys = keywords(str(tok_text), words=15).split('\n')
+
+key_words = keys.copy()
+
+keys_score =  keywords(str(tok_text), scores = True, words=24)#.split('\n')
+
+
+remove = []
+
+clean_keys = [w for w in keys if w not in remove]
+clean_keys
+
+
+# Produce a wordcloud 
+
+import re
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud, STOPWORDS
+
+stopwords_cloud = set(STOPWORDS)
+
+word_keys = re.sub("'", " ",str(keys))
+
+wordcloud = WordCloud(max_font_size=50, max_words=20, stopwords = stopwords_cloud, background_color="white").generate(word_keys)
+
+# Display the generated image:
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis("off")
+plt.show()
+
+
+# Keywords by place
+
+from nltk.tokenize import word_tokenize
+
+d['Tweet Text String'] =  d['Tweet Text'].str.lower()
+
+
+list_f = []
+
+list_location = []
+
+for ii in range(len(key_words)): 
+      
+    location = []
+    for i in range(0, len(d)): 
+
+        if clean_keys[ii] in d.iloc[i, -1]:
+            location.append(d.iloc[i, 5])
+    fig_loc = pd.Series(location)
+    fig_loc2 = fig_loc.value_counts()
+    fig_loc2[:10].sort_values().plot(title=clean_keys[ii], kind='barh')
+    fname = '{}.jpg'.format(clean_keys[ii])
+    plt.savefig(fname)
+    
+        
